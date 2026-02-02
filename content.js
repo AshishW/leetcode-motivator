@@ -34,39 +34,45 @@ const QUOTES = [
 ];
 
 
+function handleInteraction() {
+    const now = Date.now();
+    const fiveMinutesAgo = now - (5 * 60 * 1000);
+    const coolDownTime = 10 * 60 * 1000; // 10 minutes
 
-function setupRunButton() {
-    const runButton = document.querySelector('[data-e2e-locator="console-run-button"]');
+    chrome.storage.local.get(['clickStamp', 'lastShown'], (result) => {
+        let clicks = result.clickStamp || [];
+        let lastShown = result.lastShown || 0;
+        clicks.push(now);
+        clicks = clicks.filter(time => time > fiveMinutesAgo);
+        const isStuck = clicks.length >= 3;
+        const isCooledDown = now - lastShown > coolDownTime;
 
-    // Check if button exists AND if we haven't already tagged it
-    if (runButton && !runButton.dataset.listenerAttached) {
-        console.log("Target acquired!");
+        if (isStuck && isCooledDown) {
+            showMotivation();
+            chrome.storage.local.set({ lastShown: now });
+        }
 
-        runButton.dataset.listenerAttached = "true";
+        chrome.storage.local.set({ clickStamp: clicks })
+    })
 
-        runButton.addEventListener('click', () => {
-            const now = Date.now();
-            const fiveMinutesAgo = now - (5 * 60 * 1000);
-            const coolDownTime = 10 * 60 * 1000; // 10 minutes
+}
 
-            chrome.storage.local.get(['clickStamp', 'lastShown'], (result) => {
-                let clicks = result.clickStamp || [];
-                let lastShown = result.lastShown || 0;
-                clicks.push(now);
-                clicks = clicks.filter(time => time > fiveMinutesAgo);
-                const isStuck = clicks.length >= 3;
-                const isCooledDown = now - lastShown > coolDownTime;
+function setupButtons() {
+    const selectors = [
+        '[data-e2e-locator="console-run-button"]',
+        '[data-e2e-locator="console-submit-button"]'
+    ]
 
-                if (isStuck && isCooledDown) {
-                    showMotivation();
-                    chrome.storage.local.set({ lastShown: now });
-                }
-
-                chrome.storage.local.set({ clickStamp: clicks })
-            })
-
-        });
-    }
+    selectors.forEach(selector => {
+        const btn = document.querySelector(selector);
+        if (btn && !btn.dataset.listenerAttached) {
+            console.log("Target acquired!");
+            btn.dataset.listenerAttached = "true";
+            btn.addEventListener('click', () => {
+                handleInteraction();
+            });
+        }
+    })
 }
 
 
@@ -128,13 +134,21 @@ function resetInactivityTimer() {
 
 document.addEventListener('keydown', resetInactivityTimer);
 document.addEventListener('mousedown', resetInactivityTimer);
+
+
 // 1. the observer
 const observer = new MutationObserver(() => {
-    setupRunButton();
+    setupButtons();
+
+    //reset clickstamp on accepted
+    let submissionResult = document.querySelector('[data-e2e-locator="submission-result"]');
+    if (submissionResult && submissionResult.innerText.includes("Accepted")) {
+        chrome.storage.local.set({ clickStamp: [] })
+    }
 });
 
 // 2. Start observing
 observer.observe(document.body, { childList: true, subtree: true });
 
 // 3. RUNS ONCE IMMEDIATELY (imp for race conditions)
-setupRunButton();
+setupButtons();
