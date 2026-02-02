@@ -6,7 +6,7 @@ const QUOTES = [
     "Believe in yourself, you've got this! 🔍",
     "One step at a time. You're doing great. ✅",
     "Every challenge is an opportunity to grow. ✨",
-    "You are capable of amazing things. 📈",
+    "You are capable of amazing things. Keep showing up!📈",
     "Don't worry about the speed, worry about the journey. ⏱️",
     "Consistency beats intensity. Every day counts. 📅",
     "You are more than your LeetCode rank. ⭐",
@@ -15,12 +15,6 @@ const QUOTES = [
     "The most efficient solution isn't always the first one. 💡",
     "Try sketching the logic on paper first. 📝",
     "Visualize the data structure in your mind. 🧊",
-    "Stack, Queue, Heap... you've got the tools. 🧰",
-    "Two pointers are often better than one. 📍",
-    "Sliding windows open new possibilities. 🪟",
-    "Recursion is just life repeating itself until a base case. 🌀",
-    "Graph problems are just connections waiting to be made. 🕸️",
-    "Don't let a Medium problem give you a Hard time. 🥊",
     "The compiler is your partner, not your critic. 🤝",
     "Every 'Run Code' is a step toward mastery. ⚡",
     "Your future self will thank you for not quitting today. 🌅",
@@ -39,6 +33,8 @@ const QUOTES = [
     "Believe in your logic. It's gotten you this far. 🎖️",
 ];
 
+
+
 function setupRunButton() {
     const runButton = document.querySelector('[data-e2e-locator="console-run-button"]');
 
@@ -46,20 +42,29 @@ function setupRunButton() {
     if (runButton && !runButton.dataset.listenerAttached) {
         console.log("Target acquired!");
 
-        runButton.dataset.listenerAttached = "true"; // Mark it!
+        runButton.dataset.listenerAttached = "true";
 
-        let clickStamp = []
         runButton.addEventListener('click', () => {
             const now = Date.now();
             const fiveMinutesAgo = now - (5 * 60 * 1000);
-            clickStamp.push(now);
-            clickStamp = clickStamp.filter(time => time > fiveMinutesAgo);
-            if (clickStamp.length >= 3) {
-                console.log("clicked more than 3 times in 5 minutes")
-                showMotivation();
-            }
-            const difference = clickStamp[clickStamp.length - 1] - clickStamp[0];
-            console.log(`Run clicked ${difference / 1000 / 60} minutes after first click`);
+            const coolDownTime = 10 * 60 * 1000; // 10 minutes
+
+            chrome.storage.local.get(['clickStamp', 'lastShown'], (result) => {
+                let clicks = result.clickStamp || [];
+                let lastShown = result.lastShown || 0;
+                clicks.push(now);
+                clicks = clicks.filter(time => time > fiveMinutesAgo);
+                const isStuck = clicks.length >= 3;
+                const isCooledDown = now - lastShown > coolDownTime;
+
+                if (isStuck && isCooledDown) {
+                    showMotivation();
+                    chrome.storage.local.set({ lastShown: now });
+                }
+
+                chrome.storage.local.set({ clickStamp: clicks })
+            })
+
         });
     }
 }
@@ -84,7 +89,7 @@ function showMotivation() {
                 background: #1a1a1a;
                 color: #ffa116; /* LeetCode Orange */
                 padding: 15px;
-                border-radius: 8px;
+                border-radius: 12px;
                 border: 1px solid #ffa116;
                 font-family: sans-serif;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.5);
@@ -110,6 +115,19 @@ function showMotivation() {
     shadow.getElementById('close-btn').onclick = () => host.remove();
 }
 
+
+
+let inactivityTimer;
+
+function resetInactivityTimer() {
+    clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(() => {
+        showMotivation()
+    }, 10 * 60 * 1000);
+}
+
+document.addEventListener('keydown', resetInactivityTimer);
+document.addEventListener('mousedown', resetInactivityTimer);
 // 1. the observer
 const observer = new MutationObserver(() => {
     setupRunButton();
