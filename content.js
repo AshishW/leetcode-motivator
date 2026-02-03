@@ -102,8 +102,7 @@ function showMotivation(reason = 'stuck') {
     host.style.position = 'fixed';
     host.style.bottom = '24px';
     host.style.right = '24px';
-    host.style.zIndex = '9999';
-    host.style.pointerEvents = 'none';
+    host.style.zIndex = '2147483647';
 
     const shadow = host.attachShadow({ mode: 'open' });
     shadow.innerHTML = `
