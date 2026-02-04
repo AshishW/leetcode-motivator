@@ -264,7 +264,10 @@ const observer = new MutationObserver(() => {
 
     //reset clickstamp on accepted
     let submissionResult = document.querySelector('[data-e2e-locator="submission-result"]');
+    let consoleResult = document.querySelector('[data-e2e-locator="console-result"]')
     if (submissionResult && submissionResult.innerText.includes("Accepted")) {
+        chrome.storage.local.set({ clickStamp: [] })
+    } else if (consoleResult && consoleResult.innerText.includes("Accepted")) {
         chrome.storage.local.set({ clickStamp: [] })
     }
 });
